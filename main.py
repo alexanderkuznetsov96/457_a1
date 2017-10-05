@@ -20,6 +20,11 @@ except:
   print 'Error: PyOpenGL has not been installed.'
   sys.exit(0)
 
+  
+  
+# Constants
+maxIntensity = 235
+
 
 
 # Globals
@@ -28,7 +33,7 @@ windowWidth  = 600 # window dimensions
 windowHeight =  600
 
 factor = 1 # factor by which luminance is scaled
-
+term = 0 # term by which luminance is transformed
 
 
 # Image directory and pathe to image file
@@ -78,8 +83,8 @@ def buildImage():
 
       # ---- MODIFY PIXEL ----
 
-      y = int(factor * y)
-
+      y = int(factor * y + term)
+      
       # write destination pixel (while flipping the image in the vertical direction)
       
       dstPixels[i,height-j-1] = (y,cb,cr)
@@ -184,6 +189,7 @@ button = None
 initX = 0
 initY = 0
 initFactor = 0
+initTerm = 0
 
 
 
@@ -194,11 +200,11 @@ def mouse( btn, state, x, y ):
   global button, initX, initY, initFactor
 
   if state == GLUT_DOWN:
-
-    button = btn
-    initX = x
-    initY = y
-    initFactor = factor
+	button = btn     
+	initX = x     
+	initY = y 	
+	initFactor = factor 	
+	initTerm = term
 
   elif state == GLUT_UP:
 
@@ -213,9 +219,10 @@ def motion( x, y ):
   diffX = x - initX
   diffY = y - initY
 
-  global factor
+  global factor, term
 
-  factor = initFactor + diffX / float(windowWidth)
+  factor = initFactor + diffY / float(windowHeight)
+  term = initTerm + diffX / float(windowWidth) *  maxIntensity
 
   if factor < 0:
     factor = 0
