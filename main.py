@@ -25,7 +25,7 @@ except:
 # Globals
 
 windowWidth  = 600 # window dimensions
-windowHeight =  800
+windowHeight =  600
 
 factor = 1 # factor by which luminance is scaled
 
