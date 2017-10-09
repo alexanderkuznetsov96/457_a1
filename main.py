@@ -87,9 +87,58 @@ def copyOutputImageToCurrentImage():
   
 
 
-# Modify the current image and write to temporary image
+# Build output from current image
 
-def buildOutputImage():
+def buildOutputImageFromCurrent():
+
+  # Read image and convert to YCbCr
+
+  print imgPath
+  global outputImage
+  
+  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    print 'Image dimensions to do not match!'
+    return
+    
+  src = currentImage.convert( 'YCbCr' )
+  srcPixels = src.load()
+  outputImage = outputImage.convert( 'YCbCr' )
+  dstPixels = outputImage.load()
+
+  width  = src.size[0]
+  height = src.size[1]
+
+  # Build destination image from source image
+
+  for i in range(width):
+    for j in range(height):
+
+      # read source pixel
+      
+      y,cb,cr = srcPixels[i,j]
+
+      # ---- MODIFY PIXEL ----
+
+      #y = int(factor * y + term)
+      
+      # write destination pixel
+      
+      dstPixels[i,height-j-1] = (y,cb,cr)
+
+  # Done
+
+  outputImage = outputImage.convert( 'RGB' )
+  
+def buildOutputImageWithHistogramEqualization():
+  return
+  
+def buildOutputImageWithFilter():
+  return
+  
+def buildOutputImageWithFilterRadiusR():
+  return
+
+def buildOutputImageTransformingBrightnessAndContrast():
 
   # Read image and convert to YCbCr
 
@@ -128,8 +177,6 @@ def buildOutputImage():
   # Done
 
   outputImage = outputImage.convert( 'RGB' )
-
-
 
 # Set up the display and draw the current image
 
@@ -190,7 +237,7 @@ def keyboard( key, x, y ):
   
 # Reset editor
 
-def resetEditor():
+def resetTermAndFactor():
   
   global term, factor
   
@@ -213,8 +260,8 @@ def loadImage( path ):
   width = currentImage.size[0]
   height = currentImage.size[1]
   outputImage = Image.new( 'YCbCr', (width,height) )
-  resetEditor()
-  buildOutputImage()
+  resetTermAndFactor()
+  buildOutputImageFromCurrent()
   print imgPath
 
 def saveImage( path ):
@@ -275,12 +322,12 @@ def motion( x, y ):
 
   factor = initFactor - diffY / float(windowHeight)
   term = initTerm + diffX / float(windowWidth) *  maxIntensity
-  # print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
+  print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
 
   if factor < 0:
     factor = 0
 
-  buildOutputImage()
+  buildOutputImageTransformingBrightnessAndContrast()
   glutPostRedisplay()
   
 
