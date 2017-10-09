@@ -43,7 +43,10 @@ imgFilename = 'mandrill.png'
 
 imgPath = os.path.join( imgDir, imgFilename )
 
-
+currentImage = Image.open( imgPath )
+outputImage = Image.open( imgPath )
+  
+  
 
 # File dialog
 
@@ -54,23 +57,56 @@ root.withdraw()
 
 
 
-# Read and modify an image.
+# Copy output image to current image
 
-def buildImage():
+def copyOutputImageToCurrentImage():
+
+  global currentImage
+  
+  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    print 'Image dimensions to do not match!'
+    return
+    
+  width  = currentImage.size[0]
+  height = currentImage.size[1]  
+  tmpPixels = outputImage.load()
+  crtPixels = currentImage.load()
+  
+  for i in range(width):
+    for j in range(height):
+
+      # read pixel in temporary image
+  
+      r,g,b = tmpPixels[i,j]
+  
+      # write to current image
+  
+      crtPixels[i,height-j-1] = (r,g,b)
+
+  # Done
+  
+
+
+# Modify the current image and write to temporary image
+
+def buildOutputImage():
 
   # Read image and convert to YCbCr
 
   print imgPath
-  src = Image.open( imgPath ).convert( 'YCbCr' )
+  global outputImage
+  
+  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    print 'Image dimensions to do not match!'
+    return
+    
+  src = currentImage.convert( 'YCbCr' )
   srcPixels = src.load()
+  outputImage = outputImage.convert( 'YCbCr' )
+  dstPixels = outputImage.load()
 
   width  = src.size[0]
   height = src.size[1]
-
-  # Set up a new, blank image of the same size
-
-  dst = Image.new( 'YCbCr', (width,height) )
-  dstPixels = dst.load()
 
   # Build destination image from source image
 
@@ -85,13 +121,13 @@ def buildImage():
 
       y = int(factor * y + term)
       
-      # write destination pixel (while flipping the image in the vertical direction)
+      # write destination pixel
       
       dstPixels[i,height-j-1] = (y,cb,cr)
 
   # Done
 
-  return dst.convert( 'RGB' )
+  outputImage = outputImage.convert( 'RGB' )
 
 
 
@@ -104,9 +140,9 @@ def display():
   glClearColor ( 1, 1, 1, 0 )
   glClear( GL_COLOR_BUFFER_BIT )
 
-  # rebuild the image
+  # get the output image
 
-  img = buildImage()
+  img = outputImage
 
   width  = img.size[0]
   height = img.size[1]
@@ -151,6 +187,15 @@ def keyboard( key, x, y ):
   glutPostRedisplay()
 
 
+  
+# Reset editor
+
+def resetEditor():
+  
+  global term, factor
+  
+  term = 0
+  factor = 1
 
 # Load and save images.
 #
@@ -161,12 +206,20 @@ def keyboard( key, x, y ):
 
 def loadImage( path ):
 
-  global imgPath
+  global imgPath, currentImage, outputImage
+  
   imgPath = path
+  currentImage = Image.open(imgPath)
+  width = currentImage.size[0]
+  height = currentImage.size[1]
+  outputImage = Image.new( 'YCbCr', (width,height) )
+  resetEditor()
+  buildOutputImage()
+  print imgPath
 
 def saveImage( path ):
 
-  buildImage().save( path )
+  currentImage.save( path )
 
   
 
@@ -188,7 +241,7 @@ def reshape( newWidth, newHeight ):
 button = None
 initX = 0
 initY = 0
-initFactor = 0
+initFactor = 1
 initTerm = 0
 
 
@@ -203,12 +256,11 @@ def mouse( btn, state, x, y ):
 	button = btn     
 	initX = x     
 	initY = y 	
-	initFactor = factor 	
-	initTerm = term
 
   elif state == GLUT_UP:
 
     button = None
+    copyOutputImageToCurrentImage()
 
 
 
@@ -221,18 +273,20 @@ def motion( x, y ):
 
   global factor, term
 
-  factor = initFactor + diffY / float(windowHeight)
+  factor = initFactor - diffY / float(windowHeight)
   term = initTerm + diffX / float(windowWidth) *  maxIntensity
+  # print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
 
   if factor < 0:
     factor = 0
 
+  buildOutputImage()
   glutPostRedisplay()
   
 
     
 # Run OpenGL
-
+loadImage(imgPath)
 glutInit()
 glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB )
 glutInitWindowSize( windowWidth, windowHeight )
