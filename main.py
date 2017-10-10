@@ -5,6 +5,7 @@
 #   numpy, PyOpenGL, Pillow
 
 import sys, os, numpy
+import matplotlib.pyplot as plt
 
 try: # Pillow
   from PIL import Image
@@ -20,13 +21,9 @@ except:
   print 'Error: PyOpenGL has not been installed.'
   sys.exit(0)
 
-  
-  
 # Constants
 maxIntensity = 235
-
-
-
+intensities = 256
 # Globals
 
 windowWidth  = 600 # window dimensions
@@ -34,7 +31,6 @@ windowHeight =  600
 
 factor = 1 # factor by which luminance is scaled
 term = 0 # term by which luminance is transformed
-
 
 # Image directory and pathe to image file
 
@@ -45,8 +41,6 @@ imgPath = os.path.join( imgDir, imgFilename )
 
 currentImage = Image.open( imgPath )
 outputImage = Image.open( imgPath )
-  
-  
 
 # File dialog
 
@@ -54,8 +48,6 @@ import Tkinter, tkFileDialog
 
 root = Tkinter.Tk()
 root.withdraw()
-
-
 
 # Copy output image to current image
 
@@ -84,8 +76,6 @@ def copyOutputImageToCurrentImage():
       crtPixels[i,height-j-1] = (r,g,b)
 
   # Done
-  
-
 
 # Build output from current image
 
@@ -130,8 +120,65 @@ def buildOutputImageFromCurrent():
   outputImage = outputImage.convert( 'RGB' )
   
 def buildOutputImageWithHistogramEqualization():
-  return
-  
+  #Read image and convert to YCbCr
+  print imgPath
+  global outputImage
+  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+      print 'Image dimensions do not match..'
+      return
+  srcImg = currentImage.convert('YCbCr')
+  srcImgPixels = srcImg.load()
+  outputImage = outputImage.convert('YCbCr')
+  dstImgPixels = outputImage.load()
+
+  width = srcImg.size[0]
+  height = srcImg.size[1]
+
+  #create the histogram array
+  histArray = numpy.zeros(intensities)
+
+  for i in range(width):
+      for j in range(height):
+          #get source pixel
+          y, cb, cr = srcImgPixels[i,j]
+          #add 1 to its intensity bin
+          histArray[y] += 1
+
+  #normalize the histogram array
+  normHistArray = histArray/(width*height)
+  #get our cumulative sum density function
+  cumSumArr = numpy.array(cumSum(normHistArray))
+  #create the look up table by multiplying by (256-1)
+  lookUpTable = numpy.round(cumSumArr*(intensities - 1))
+  #plt.figure(1)
+  #plt.bar(numpy.arange(len(normHistArray)), normHistArray)
+  #print len(lookUpTable)
+
+  # create new histogram array for visualization
+  newHistArray = numpy.zeros(intensities)
+  #create new picture
+  for i in range(width):
+      for j in range(height):
+          #get source pixel
+          y, cb, cr = srcImgPixels[i,j]
+          #change using look up table
+          y = int(lookUpTable[y])
+          #add to new histogram array
+          newHistArray[y] += 1
+          #add to destination pixels
+          dstImgPixels[i, height - j - 1] = (y, cb, cr)
+
+  # normalize the histogram array
+  normNewHistArray = newHistArray / (width * height)
+  #plt.figure(2)
+  #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
+  #plt.show()
+  outputImage = outputImage.convert('RGB')
+
+def cumSum(array):
+  # finds cumulative sum of a numpy array, list
+  return [sum(array[:i+1]) for i in range(len(array))]
+
 def buildOutputImageWithFilter():
   return
   
@@ -227,6 +274,9 @@ def keyboard( key, x, y ):
     outputPath = tkFileDialog.asksaveasfilename( initialdir = '.' )
     if outputPath:
       saveImage( outputPath )
+
+  elif key == 'h':
+      buildOutputImageWithHistogramEqualization()
 
   else:
     print 'key =', key    # DO NOT REMOVE THIS LINE.  It will be used during automated marking.
