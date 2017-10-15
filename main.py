@@ -48,9 +48,9 @@ filterDir = 'filters'
 
 #filterPath = os.path.join(filterDir, filterFilename)
 currentImage = Image.open(imgPath)
-tempImage = Image.open(imgPath)
+temporaryImage = Image.open(imgPath)
 
-useTempImageFlag = True
+filterRadius = 0
 
 # File dialog
 
@@ -65,13 +65,13 @@ def copyOutputImageToCurrentImage():
 
     global currentImage
 
-    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
+    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     width  = currentImage.size[0]
     height = currentImage.size[1]
-    tmpPixels = tempImage.load()
+    tmpPixels = temporaryImage.load()
     crtPixels = currentImage.load()
 
     for i in range(width):
@@ -94,16 +94,16 @@ def buildOutputImageFromCurrent():
     # Read image and convert to YCbCr
 
     print imgPath
-    global tempImage
+    global temporaryImage
 
-    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
+    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     src = currentImage.convert( 'YCbCr' )
     srcPixels = src.load()
-    tempImage = tempImage.convert( 'YCbCr' )
-    dstPixels = tempImage.load()
+    temporaryImage = temporaryImage.convert( 'YCbCr' )
+    dstPixels = temporaryImage.load()
 
     width  = src.size[0]
     height = src.size[1]
@@ -127,19 +127,19 @@ def buildOutputImageFromCurrent():
 
     # Done
 
-    tempImage = tempImage.convert( 'RGB' )
+    temporaryImage = temporaryImage.convert( 'RGB' )
 
 def buildOutputImageWithHistogramEqualization():
     #Read image and convert to YCbCr
     print imgPath
-    global tempImage
-    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
+    global temporaryImage
+    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
         return
     srcImg = currentImage.convert('YCbCr')
     srcImgPixels = srcImg.load()
-    tempImage = tempImage.convert('YCbCr')
-    dstImgPixels = tempImage.load()
+    temporaryImage = temporaryImage.convert('YCbCr')
+    dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
@@ -183,7 +183,7 @@ def buildOutputImageWithHistogramEqualization():
     #plt.figure(2)
     #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
     #plt.show()
-    tempImage = tempImage.convert('RGB')
+    temporaryImage = temporaryImage.convert('RGB')
     copyOutputImageToCurrentImage()
 
 def cumSum(array):
@@ -205,16 +205,16 @@ def loadFilter( path ):
     print(myFilter)
 
 def buildOutputImageWithFilter():
-    global myFilter, scaleFactor, tempImage
+    global myFilter, scaleFactor, temporaryImage
 
-    if (currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
+    if (currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
         return
 
     srcImg = currentImage.convert('YCbCr')
     srcImgPixels = srcImg.load()
-    tempImage = tempImage.convert('YCbCr')
-    dstImgPixels = tempImage.load()
+    temporaryImage = temporaryImage.convert('YCbCr')
+    dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
@@ -243,7 +243,7 @@ def buildOutputImageWithFilter():
 
             dstImgPixels[m, height - n - 1] = (result, cb_pixel, cr_pixel)
 
-    tempImage = tempImage.convert('RGB')
+    temporaryImage = temporaryImage.convert('RGB')
     copyOutputImageToCurrentImage()
 
 def buildOutputImageWithFilterRadiusR():
@@ -254,16 +254,16 @@ def buildOutputImageTransformingBrightnessAndContrast():
     # Read image and convert to YCbCr
 
     print imgPath
-    global tempImage
+    global temporaryImage
 
-    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
+    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     src = currentImage.convert( 'YCbCr' )
     srcPixels = src.load()
-    tempImage = tempImage.convert( 'YCbCr' )
-    dstPixels = tempImage.load()
+    temporaryImage = temporaryImage.convert( 'YCbCr' )
+    dstPixels = temporaryImage.load()
 
     width  = src.size[0]
     height = src.size[1]
@@ -287,7 +287,7 @@ def buildOutputImageTransformingBrightnessAndContrast():
 
     # Done
 
-    tempImage = tempImage.convert( 'RGB' )
+    temporaryImage = temporaryImage.convert( 'RGB' )
 
 # Set up the display and draw the current image
 
@@ -300,10 +300,7 @@ def display():
 
     # get the output image
 
-    if(useTempImageFlag) :
-        img = tempImage
-    else :
-        imge = currentImage
+    img = temporaryImage
 
     width  = img.size[0]
     height = img.size[1]
@@ -381,13 +378,13 @@ def resetTermAndFactor():
 
 def loadImage( path ):
 
-    global imgPath, currentImage, tempImage
+    global imgPath, currentImage, temporaryImage
 
     imgPath = path
     currentImage = Image.open(imgPath)
     width = currentImage.size[0]
     height = currentImage.size[1]
-    tempImage = Image.new( 'YCbCr', (width,height) )
+    temporaryImage = Image.new( 'YCbCr', (width,height) )
     resetTermAndFactor()
     buildOutputImageFromCurrent()
     print imgPath
@@ -425,19 +422,19 @@ initTerm = 0
 
 def mouse( btn, state, x, y ):
 
-    global button, initX, initY, initFactor
+    global button, initX, initY, initFactor, useTempImageFlag
 
     if state == GLUT_DOWN:
         button = btn
         initX = x
         initY = y
-        useTempImageFlag = True
 
     elif state == GLUT_UP:
 
+        if(button == GLUT_LEFT_BUTTON):
+          copyOutputImageToCurrentImage()
         button = None
-        copyOutputImageToCurrentImage()
-        useTempImageFlag = False
+        
 
 
 
@@ -450,14 +447,19 @@ def motion( x, y ):
 
     global factor, term
 
-    factor = initFactor - diffY / float(windowHeight)
-    term = initTerm + diffX / float(windowWidth) *  maxIntensity
-    print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
+    if (button == GLUT_LEFT_BUTTON) :
+      factor = initFactor - diffY / float(windowHeight)
+      term = initTerm + diffX / float(windowWidth) *  maxIntensity
+      print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
 
-    if factor < 0:
+      if factor < 0:
         factor = 0
 
-    buildOutputImageTransformingBrightnessAndContrast()
+      buildOutputImageTransformingBrightnessAndContrast()
+      
+    elif (button == GLUT_RIGHT_BUTTON) :
+        print 'apply radius filter'
+        
     glutPostRedisplay()
 
 
