@@ -48,7 +48,9 @@ filterDir = 'filters'
 
 #filterPath = os.path.join(filterDir, filterFilename)
 currentImage = Image.open(imgPath)
-outputImage = Image.open(imgPath)
+tempImage = Image.open(imgPath)
+
+useTempImageFlag = True
 
 # File dialog
 
@@ -63,13 +65,13 @@ def copyOutputImageToCurrentImage():
 
     global currentImage
 
-    if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     width  = currentImage.size[0]
     height = currentImage.size[1]
-    tmpPixels = outputImage.load()
+    tmpPixels = tempImage.load()
     crtPixels = currentImage.load()
 
     for i in range(width):
@@ -92,16 +94,16 @@ def buildOutputImageFromCurrent():
     # Read image and convert to YCbCr
 
     print imgPath
-    global outputImage
+    global tempImage
 
-    if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     src = currentImage.convert( 'YCbCr' )
     srcPixels = src.load()
-    outputImage = outputImage.convert( 'YCbCr' )
-    dstPixels = outputImage.load()
+    tempImage = tempImage.convert( 'YCbCr' )
+    dstPixels = tempImage.load()
 
     width  = src.size[0]
     height = src.size[1]
@@ -125,19 +127,19 @@ def buildOutputImageFromCurrent():
 
     # Done
 
-    outputImage = outputImage.convert( 'RGB' )
+    tempImage = tempImage.convert( 'RGB' )
 
 def buildOutputImageWithHistogramEqualization():
     #Read image and convert to YCbCr
     print imgPath
-    global outputImage
-    if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    global tempImage
+    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
         print 'Image dimensions do not match..'
         return
     srcImg = currentImage.convert('YCbCr')
     srcImgPixels = srcImg.load()
-    outputImage = outputImage.convert('YCbCr')
-    dstImgPixels = outputImage.load()
+    tempImage = tempImage.convert('YCbCr')
+    dstImgPixels = tempImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
@@ -181,7 +183,7 @@ def buildOutputImageWithHistogramEqualization():
     #plt.figure(2)
     #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
     #plt.show()
-    outputImage = outputImage.convert('RGB')
+    tempImage = tempImage.convert('RGB')
     copyOutputImageToCurrentImage()
 
 def cumSum(array):
@@ -203,16 +205,16 @@ def loadFilter( path ):
     print(myFilter)
 
 def buildOutputImageWithFilter():
-    global myFilter, scaleFactor, outputImage
+    global myFilter, scaleFactor, tempImage
 
-    if (currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    if (currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
         print 'Image dimensions do not match..'
         return
 
     srcImg = currentImage.convert('YCbCr')
     srcImgPixels = srcImg.load()
-    outputImage = outputImage.convert('YCbCr')
-    dstImgPixels = outputImage.load()
+    tempImage = tempImage.convert('YCbCr')
+    dstImgPixels = tempImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
@@ -241,7 +243,7 @@ def buildOutputImageWithFilter():
 
             dstImgPixels[m, height - n - 1] = (result, cb_pixel, cr_pixel)
 
-    outputImage = outputImage.convert('RGB')
+    tempImage = tempImage.convert('RGB')
     copyOutputImageToCurrentImage()
 
 def buildOutputImageWithFilterRadiusR():
@@ -252,16 +254,16 @@ def buildOutputImageTransformingBrightnessAndContrast():
     # Read image and convert to YCbCr
 
     print imgPath
-    global outputImage
+    global tempImage
 
-    if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+    if(currentImage.size[0] != tempImage.size[0] or currentImage.size[1] != tempImage.size[1]):
         print 'Image dimensions to do not match!'
         return
 
     src = currentImage.convert( 'YCbCr' )
     srcPixels = src.load()
-    outputImage = outputImage.convert( 'YCbCr' )
-    dstPixels = outputImage.load()
+    tempImage = tempImage.convert( 'YCbCr' )
+    dstPixels = tempImage.load()
 
     width  = src.size[0]
     height = src.size[1]
@@ -285,7 +287,7 @@ def buildOutputImageTransformingBrightnessAndContrast():
 
     # Done
 
-    outputImage = outputImage.convert( 'RGB' )
+    tempImage = tempImage.convert( 'RGB' )
 
 # Set up the display and draw the current image
 
@@ -298,7 +300,10 @@ def display():
 
     # get the output image
 
-    img = outputImage
+    if(useTempImageFlag) :
+        img = tempImage
+    else :
+        imge = currentImage
 
     width  = img.size[0]
     height = img.size[1]
@@ -376,13 +381,13 @@ def resetTermAndFactor():
 
 def loadImage( path ):
 
-    global imgPath, currentImage, outputImage
+    global imgPath, currentImage, tempImage
 
     imgPath = path
     currentImage = Image.open(imgPath)
     width = currentImage.size[0]
     height = currentImage.size[1]
-    outputImage = Image.new( 'YCbCr', (width,height) )
+    tempImage = Image.new( 'YCbCr', (width,height) )
     resetTermAndFactor()
     buildOutputImageFromCurrent()
     print imgPath
@@ -426,11 +431,13 @@ def mouse( btn, state, x, y ):
         button = btn
         initX = x
         initY = y
+        useTempImageFlag = True
 
     elif state == GLUT_UP:
 
         button = None
         copyOutputImageToCurrentImage()
+        useTempImageFlag = False
 
 
 
