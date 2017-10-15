@@ -6,7 +6,7 @@
 
 import sys, os, numpy
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 try: # Pillow
     from PIL import Image
@@ -44,9 +44,9 @@ imgFilename = 'mandrill.png'
 imgPath = os.path.join(imgDir, imgFilename)
 
 filterDir = 'filters'
-filterFilename = 'gaussian7x'
+#filterFilename = 'gaussian7x'
 
-filterPath = os.path.join(filterDir, filterFilename)
+#filterPath = os.path.join(filterDir, filterFilename)
 currentImage = Image.open(imgPath)
 outputImage = Image.open(imgPath)
 
@@ -182,30 +182,28 @@ def buildOutputImageWithHistogramEqualization():
     #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
     #plt.show()
     outputImage = outputImage.convert('RGB')
-    return
+    copyOutputImageToCurrentImage()
 
 def cumSum(array):
     # finds cumulative sum of a numpy array, list
     return [sum(array[:i+1]) for i in range(len(array))]
 
-def loadFilter():
-    global scaleFactor
-    global myFilter
-    filter = open(filterPath)
-    #dimensions = filter.readline()
+def loadFilter( path ):
+    global scaleFactor, myFilter
+    
+    filter = open( path )
+    ##dimensions = filter.readline()
     xDim, yDim = [int(s) for s in filter.readline() if s.isdigit()]
     scaleFactor = float(filter.readline())
     myFilter = numpy.zeros((yDim, xDim))
     for i in range(yDim):
          myFilter[i] = [int(s) for s in filter.readline() if s.isdigit()]
-    print('Loaded: ' + filterFilename)
+    print('Loaded: ' + path)
     print(scaleFactor)
     print(myFilter)
 
 def buildOutputImageWithFilter():
-    global myFilter
-    global scaleFactor
-    global outputImage
+    global myFilter, scaleFactor, outputImage
 
     if (currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
         print 'Image dimensions do not match..'
@@ -244,7 +242,7 @@ def buildOutputImageWithFilter():
             dstImgPixels[m, height - n - 1] = (result, cb_pixel, cr_pixel)
 
     outputImage = outputImage.convert('RGB')
-    return
+    copyOutputImageToCurrentImage()
 
 def buildOutputImageWithFilterRadiusR():
     return
@@ -343,12 +341,16 @@ def keyboard( key, x, y ):
         buildOutputImageWithHistogramEqualization()
 
     elif key == 'f':
-        loadFilter()
+        path = tkFileDialog.askopenfilename( initialdir = filterDir )
+        if path:
+          loadFilter( path )
 
     elif key == 'a':
         buildOutputImageWithFilter()
+        
     elif key == 'r':
         buildOutputImageWithFilterRadiusR()
+        
     else:
         print 'key =', key    # DO NOT REMOVE THIS LINE.  It will be used during automated marking.
 
