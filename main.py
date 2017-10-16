@@ -36,6 +36,7 @@ term = 0 # term by which luminance is transformed
 #filter variables
 scaleFactor = 0
 myFilter = []
+
 # Image directory and path to image file
 
 imgDir = 'images'
@@ -44,11 +45,12 @@ imgFilename = 'mandrill.png'
 imgPath = os.path.join(imgDir, imgFilename)
 
 filterDir = 'filters'
-#filterFilename = 'gaussian7x'
+filterFilename = 'gaussian7x'
 
-#filterPath = os.path.join(filterDir, filterFilename)
-currentImage = Image.open(imgPath)
-temporaryImage = Image.open(imgPath)
+filterPath = os.path.join(filterDir, filterFilename)
+
+currentImage = Image.open(imgPath).convert( 'YCbCr' )
+temporaryImage = Image.open(imgPath).convert( 'YCbCr' )
 
 filterRadius = 15
 
@@ -69,9 +71,9 @@ def buildImage():
 
   print imgPath
   if (buildTemporaryImageFlag) :
-    src = temporaryImage.convert( 'YCbCr' )
+    src = temporaryImage
   else :
-    src = currentImage.convert( 'YCbCr' )
+    src = currentImage
     
   srcPixels = src.load()
 
@@ -131,9 +133,9 @@ def modifyBrightnessAndContrastOfTemporaryImage():
     
   # Read image and convert to YCbCr
     
-  src = currentImage.convert( 'YCbCr' )
+  src = currentImage
   srcPixels = src.load()
-  temporaryImage = temporaryImage.convert( 'YCbCr' )
+  temporaryImage = temporaryImage
   dstPixels = temporaryImage.load()
 
   width  = src.size[0]
@@ -159,7 +161,7 @@ def modifyBrightnessAndContrastOfTemporaryImage():
   # Done
 
   print 'modifying temporary image'
-  temporaryImage = temporaryImage.convert( 'RGB' )
+  #temporaryImage = temporaryImage.convert( 'RGB' )
 
 def buildCurrentImageWithHistogramEqualization():
     #Read image and convert to YCbCr
@@ -168,9 +170,9 @@ def buildCurrentImageWithHistogramEqualization():
     if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
         return
-    srcImg = currentImage.convert('YCbCr')
+    srcImg = currentImage
     srcImgPixels = srcImg.load()
-    temporaryImage = temporaryImage.convert('YCbCr')
+    temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
@@ -215,7 +217,7 @@ def buildCurrentImageWithHistogramEqualization():
     #plt.figure(2)
     #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
     #plt.show()
-    temporaryImage = temporaryImage.convert('RGB')
+    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()
 
 def cumSum(array):
@@ -223,9 +225,10 @@ def cumSum(array):
     return [sum(array[:i+1]) for i in range(len(array))]
 
 def loadFilter( path ):
-    global scaleFactor, myFilter
+    global scaleFactor, myFilter, filterPath
     
-    filter = open( path )
+    filterPath = path
+    filter = open( filterPath )
     ##dimensions = filter.readline()
     xDim, yDim = [int(s) for s in filter.readline() if s.isdigit()]
     scaleFactor = float(filter.readline())
@@ -243,9 +246,9 @@ def buildCurrentImageWithFilter():
         print 'Image dimensions do not match..'
         return
 
-    srcImg = currentImage.convert('YCbCr')
+    srcImg = currentImage
     srcImgPixels = srcImg.load()
-    temporaryImage = temporaryImage.convert('YCbCr')
+    temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
@@ -275,7 +278,7 @@ def buildCurrentImageWithFilter():
 
             dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
-    temporaryImage = temporaryImage.convert('RGB')
+    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()
     
     
@@ -289,19 +292,13 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
         print 'Image dimensions do not match..'
         return
 
-    srcImg = currentImage.convert('YCbCr')
+    srcImg = currentImage
     srcImgPixels = srcImg.load()
-    temporaryImage = temporaryImage.convert('YCbCr')
+    temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
-    height = srcImg.size[1]
-    
-    imgX = x - (windowWidth - width)/2
-    imgY = y - (windowHeight - height)/2
-    if( imgX < 0 or imgX > width or imgY < 0 or imgY > height):
-      return
-    
+    height = srcImg.size[1]   
 
     #tempFilter = numpy.flip(myFilter, 2)
     #apply convolution for all image
@@ -310,27 +307,32 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
     xFilterCenter = int(math.floor(xFilterDim/2))
     yFilterCenter = int(math.floor(yFilterDim/2))
     
-    print 'y dim %d, x dim %d' %(yFilterDim, xFilterDim)
+    imgX = x - (windowWidth - width)/2
+    imgY = y - (windowHeight - height)/2
+    
+    #print 'y dim %d, x dim %d' %(yFilterDim, xFilterDim)
 
     for m in range(imgX - filterRadius, imgX + filterRadius):
         for n in range(imgY - filterRadius, imgY + filterRadius):
+            print ('%d %d' %(m,n))
             if( (m - imgX)**2 + (n - imgY)**2 < filterRadius**2):
                 result = 0
-                y_pixel, cb_pixel, cr_pixel = srcImgPixels[m,n]
+                if(m >= 0 and m < width and n >= 0 and n < height):
+                    y_pixel, cb_pixel, cr_pixel = srcImgPixels[m,n]
 
-                for i in range(yFilterDim):
-                    yFilterIndex = yFilterDim - 1 - i
-                    for j in range(xFilterDim):
-                        xFilterIndex = xFilterDim - 1 - j
-                        pixelYIndex = n + (i - yFilterCenter)
-                        pixelXIndex = m + (j - xFilterCenter)
-                        if(pixelXIndex >= 0 and pixelXIndex < width and pixelYIndex >= 0 and pixelYIndex < height):
-                            y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
-                            result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
+                    for i in range(yFilterDim):
+                        yFilterIndex = yFilterDim - 1 - i
+                        for j in range(xFilterDim):
+                            xFilterIndex = xFilterDim - 1 - j
+                            pixelYIndex = n + (i - yFilterCenter)
+                            pixelXIndex = m + (j - xFilterCenter)
+                            if(pixelXIndex >= 0 and pixelXIndex < width and pixelYIndex >= 0 and pixelYIndex < height):
+                                y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
+                                result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
 
-                dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
+                    dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
-    temporaryImage = temporaryImage.convert('RGB')
+    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()    
 
     
@@ -425,10 +427,10 @@ def loadImage( path ):
     global imgPath, currentImage, temporaryImage
 
     imgPath = path
-    currentImage = Image.open(imgPath)
+    currentImage = Image.open(imgPath).convert( 'YCbCr' )
     width = currentImage.size[0]
     height = currentImage.size[1]
-    temporaryImage = Image.open(imgPath)
+    temporaryImage = Image.open(imgPath).convert( 'YCbCr' )
     
     #print imgPath
 
@@ -494,7 +496,7 @@ def motion( x, y ):
     if (button == GLUT_LEFT_BUTTON) :
       factor = initFactor - diffY / float(windowHeight)
       term = initTerm + diffX / float(windowWidth) *  maxIntensity
-      print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
+      #print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
 
       if factor < 0:
         factor = 0
@@ -502,7 +504,7 @@ def motion( x, y ):
       modifyBrightnessAndContrastOfTemporaryImage()
       
     elif (button == GLUT_RIGHT_BUTTON) :
-        print 'apply radius filter R = %d x,y = %d,%d' %(filterRadius, x,y)
+        #print 'apply radius filter R = %d x,y = %d,%d' %(filterRadius, x,y)
         buildCurrentImageWithFilterRadiusR(x,y)
         
     glutPostRedisplay()
@@ -511,6 +513,8 @@ def motion( x, y ):
 
 # Run OpenGL
 loadImage(imgPath)
+loadFilter (filterPath) 
+
 glutInit()
 glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB )
 glutInitWindowSize( windowWidth, windowHeight )
