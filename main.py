@@ -194,6 +194,8 @@ def buildCurrentImageWithHistogramEqualization():
 
     # Normalize the histogram array
     normHistArray = histArray/(width*height)
+    print 'old histogram array:\n'
+    print normHistArray
     # Get our cumulative sum density function
     cumSumArr = numpy.array(cumSum(normHistArray))
     # Create the look up table by multiplying by (256-1)
@@ -215,6 +217,8 @@ def buildCurrentImageWithHistogramEqualization():
 
     # Normalize the histogram array
     normNewHistArray = newHistArray / (width * height)
+    print 'new histogram array:\n'
+    print normNewHistArray
     copyTemporaryImageToCurrentImage()
 
 def cumSum(array):
