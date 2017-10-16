@@ -314,8 +314,8 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
 
     for m in range(imgX - filterRadius, imgX + filterRadius):
         for n in range(imgY - filterRadius, imgY + filterRadius):
-            print ('%d %d' %(m,n))
-            if( (m - imgX)**2 + (n - imgY)**2 < filterRadius**2):
+            #print ('%d %d' %(m,n))
+            if( (m - imgX)**2 + (n - imgY)**2 <= filterRadius**2):
                 result = 0
                 if(m >= 0 and m < width and n >= 0 and n < height):
                     y_pixel, cb_pixel, cr_pixel = srcImgPixels[m,n]
