@@ -44,9 +44,9 @@ imgFilename = 'mandrill.png'
 imgPath = os.path.join( imgDir, imgFilename )
 
 currentImage = Image.open( imgPath )
-outputImage = Image.open( imgPath )
+temporaryImage = Image.open( imgPath )
   
-  
+buildTemporaryImageFlag = False
 
 # File dialog
 
@@ -55,21 +55,52 @@ import Tkinter, tkFileDialog
 root = Tkinter.Tk()
 root.withdraw()
 
+# Build appropriate (temporary or current) image.
 
+def buildImage():
 
-# Copy output image to current image
+  # Read image and convert to YCbCr
 
-def copyOutputImageToCurrentImage():
+  print imgPath
+  if (buildTemporaryImageFlag) :
+    src = temporaryImage.convert( 'YCbCr' )
+  else :
+    src = currentImage.convert( 'YCbCr' )
+    
+  srcPixels = src.load()
+
+  width  = src.size[0]
+  height = src.size[1]
+
+  # Set up a new, blank image of the same size
+
+  dst = Image.new( 'YCbCr', (width,height) )
+  dstPixels = dst.load()
+
+  # Build destination image from source image
+
+  for i in range(width):
+    for j in range(height):
+      
+      dstPixels[i,height-j-1] = srcPixels[i,j];
+
+  # Done
+
+  return dst.convert( 'RGB' )
+
+# Copy temporary image to current image
+
+def copyTemporaryImageToCurrentImage():
 
   global currentImage
   
-  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+  if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
     print 'Image dimensions to do not match!'
     return
     
   width  = currentImage.size[0]
   height = currentImage.size[1]  
-  tmpPixels = outputImage.load()
+  tmpPixels = temporaryImage.load()
   crtPixels = currentImage.load()
   
   for i in range(width):
@@ -81,7 +112,7 @@ def copyOutputImageToCurrentImage():
   
       # write to current image
   
-      crtPixels[i,height-j-1] = (r,g,b)
+      crtPixels[i,j] = (r,g,b)
 
   # Done
   
@@ -89,21 +120,21 @@ def copyOutputImageToCurrentImage():
 
 # Modify the current image and write to temporary image
 
-def buildOutputImage():
-
-  # Read image and convert to YCbCr
+def modifyBrightnessAndContrastOfTemporaryImage():
 
   print imgPath
-  global outputImage
+  global temporaryImage
   
-  if(currentImage.size[0] != outputImage.size[0] or currentImage.size[1] != outputImage.size[1]):
+  if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
     print 'Image dimensions to do not match!'
     return
     
+  # Read image and convert to YCbCr
+    
   src = currentImage.convert( 'YCbCr' )
   srcPixels = src.load()
-  outputImage = outputImage.convert( 'YCbCr' )
-  dstPixels = outputImage.load()
+  temporaryImage = temporaryImage.convert( 'YCbCr' )
+  dstPixels = temporaryImage.load()
 
   width  = src.size[0]
   height = src.size[1]
@@ -123,11 +154,12 @@ def buildOutputImage():
       
       # write destination pixel
       
-      dstPixels[i,height-j-1] = (y,cb,cr)
+      dstPixels[i,j] = (y,cb,cr)
 
   # Done
 
-  outputImage = outputImage.convert( 'RGB' )
+  print 'modifying temporary image'
+  temporaryImage = temporaryImage.convert( 'RGB' )
 
 
 
@@ -142,7 +174,7 @@ def display():
 
   # get the output image
 
-  img = outputImage
+  img = buildImage()
 
   width  = img.size[0]
   height = img.size[1]
@@ -186,17 +218,6 @@ def keyboard( key, x, y ):
 
   glutPostRedisplay()
 
-
-  
-# Reset editor
-
-def resetEditor():
-  
-  global term, factor
-  
-  term = 0
-  factor = 1
-
 # Load and save images.
 #
 # Modify these to load to the current image and to save the current image.
@@ -206,15 +227,15 @@ def resetEditor():
 
 def loadImage( path ):
 
-  global imgPath, currentImage, outputImage
+  global imgPath, currentImage, temporaryImage
   
   imgPath = path
   currentImage = Image.open(imgPath)
   width = currentImage.size[0]
   height = currentImage.size[1]
-  outputImage = Image.new( 'YCbCr', (width,height) )
-  resetEditor()
-  buildOutputImage()
+  temporaryImage = Image.new( 'YCbCr', (width,height) )
+  #resetEditor()
+  #buildTemporaryImage()
   print imgPath
 
 def saveImage( path ):
@@ -250,17 +271,19 @@ initTerm = 0
 
 def mouse( btn, state, x, y ):
 
-  global button, initX, initY, initFactor
+  global button, initX, initY, initFactor, buildTemporaryImageFlag
 
   if state == GLUT_DOWN:
-	button = btn     
-	initX = x     
-	initY = y 	
-
+    button = btn     
+    initX = x     
+    initY = y
+    buildTemporaryImageFlag = True
+    
   elif state == GLUT_UP:
 
     button = None
-    copyOutputImageToCurrentImage()
+    buildTemporaryImageFlag = False
+    copyTemporaryImageToCurrentImage()
 
 
 
@@ -280,7 +303,7 @@ def motion( x, y ):
   if factor < 0:
     factor = 0
 
-  buildOutputImage()
+  modifyBrightnessAndContrastOfTemporaryImage()
   glutPostRedisplay()
   
 
