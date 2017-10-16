@@ -50,7 +50,7 @@ filterDir = 'filters'
 currentImage = Image.open(imgPath)
 temporaryImage = Image.open(imgPath)
 
-filterRadius = 0
+filterRadius = 15
 
 buildTemporaryImageFlag = False
 
@@ -65,7 +65,7 @@ root.withdraw()
 
 def buildImage():
 
-  # Read image and convert to YCbCr
+  # Read image
 
   print imgPath
   if (buildTemporaryImageFlag) :
@@ -114,11 +114,7 @@ def copyTemporaryImageToCurrentImage():
 
       # read pixel in temporary image
   
-      r,g,b = tmpPixels[i,j]
-  
-      # write to current image
-  
-      crtPixels[i,j] = (r,g,b)
+      crtPixels[i,j] = tmpPixels[i,j]
 
   # Done
 
@@ -241,7 +237,7 @@ def loadFilter( path ):
     print(myFilter)
 
 def buildCurrentImageWithFilter():
-    global myFilter, scaleFactor, temporaryImage
+    global temporaryImage
 
     if (currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
@@ -284,8 +280,58 @@ def buildCurrentImageWithFilter():
     
     
 
-def buildCurrentImageWithFilterRadiusR():
-    return
+def buildCurrentImageWithFilterRadiusR( x, y ):
+
+    global temporaryImage, currentImage
+    
+
+    if (currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
+        print 'Image dimensions do not match..'
+        return
+
+    srcImg = currentImage.convert('YCbCr')
+    srcImgPixels = srcImg.load()
+    temporaryImage = temporaryImage.convert('YCbCr')
+    dstImgPixels = temporaryImage.load()
+
+    width = srcImg.size[0]
+    height = srcImg.size[1]
+    
+    imgX = x - (windowWidth - width)/2
+    imgY = y - (windowHeight - height)/2
+    if( imgX < 0 or imgX > width or imgY < 0 or imgY > height):
+      return
+    
+
+    #tempFilter = numpy.flip(myFilter, 2)
+    #apply convolution for all image
+    xFilterDim = len(myFilter[0])
+    yFilterDim = len(myFilter)
+    xFilterCenter = int(math.floor(xFilterDim/2))
+    yFilterCenter = int(math.floor(yFilterDim/2))
+    
+    print 'y dim %d, x dim %d' %(yFilterDim, xFilterDim)
+
+    for m in range(imgX - filterRadius, imgX + filterRadius):
+        for n in range(imgY - filterRadius, imgY + filterRadius):
+            if( (m - imgX)**2 + (n - imgY)**2 < filterRadius**2):
+                result = 0
+                y_pixel, cb_pixel, cr_pixel = srcImgPixels[m,n]
+
+                for i in range(yFilterDim):
+                    yFilterIndex = yFilterDim - 1 - i
+                    for j in range(xFilterDim):
+                        xFilterIndex = xFilterDim - 1 - j
+                        pixelYIndex = n + (i - yFilterCenter)
+                        pixelXIndex = m + (j - xFilterCenter)
+                        if(pixelXIndex >= 0 and pixelXIndex < width and pixelYIndex >= 0 and pixelYIndex < height):
+                            y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
+                            result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
+
+                dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
+
+    temporaryImage = temporaryImage.convert('RGB')
+    copyTemporaryImageToCurrentImage()    
 
     
 
@@ -320,7 +366,9 @@ def display():
 
     glutSwapBuffers()
 
-
+def changeFilterRadiusBy( dR ) :
+    global filterRadius
+    filterRadius = filterRadius + dR
 
 # Handle keyboard input
 
@@ -348,26 +396,22 @@ def keyboard( key, x, y ):
           loadFilter( path )
 
     elif key == 'a':
-        buildCurrentImageWithFilter()
+        buildCurrentImageWithFilter()       
         
-    elif key == 'r':
-        buildCurrentImageWithFilterRadiusR()
+    elif key == '+' or key == '=':
+        changeFilterRadiusBy(1)
+        print 'filter radius %d' %filterRadius
+       
+    elif key == '-' or key == '_':
+        changeFilterRadiusBy(-1)
+        print 'filter radius %d' %filterRadius
         
     else:
         print 'key =', key    # DO NOT REMOVE THIS LINE.  It will be used during automated marking.
 
     glutPostRedisplay()
 
-
-
-# Reset editor
-
-def resetTermAndFactor():
-
-    global term, factor
-
-    term = 0
-    factor = 1
+    
 
 # Load and save images.
 #
@@ -384,8 +428,9 @@ def loadImage( path ):
     currentImage = Image.open(imgPath)
     width = currentImage.size[0]
     height = currentImage.size[1]
-    temporaryImage = Image.new( 'YCbCr', (width,height) )
-    print imgPath
+    temporaryImage = Image.open(imgPath)
+    
+    #print imgPath
 
 def saveImage( path ):
 
@@ -434,9 +479,7 @@ def mouse( btn, state, x, y ):
         if(button == GLUT_LEFT_BUTTON):
           copyTemporaryImageToCurrentImage()
           buildTemporaryImageFlag = False
-        button = None
-        
-
+        button = None     
 
 
 # Handle mouse motion
@@ -459,7 +502,8 @@ def motion( x, y ):
       modifyBrightnessAndContrastOfTemporaryImage()
       
     elif (button == GLUT_RIGHT_BUTTON) :
-        print 'apply radius filter'
+        print 'apply radius filter R = %d x,y = %d,%d' %(filterRadius, x,y)
+        buildCurrentImageWithFilterRadiusR(x,y)
         
     glutPostRedisplay()
 
