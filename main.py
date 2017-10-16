@@ -42,7 +42,6 @@ term = 0 # term by which luminance is transformed
 
 # Filter Variables
 
-scaleFactor = 0
 myFilter = []
 filterRadius = 15
 
@@ -222,7 +221,7 @@ def cumSum(array):
     return [sum(array[:i+1]) for i in range(len(array))]
 
 def loadFilter( path ):
-    global scaleFactor, myFilter, filterPath
+    global myFilter, filterPath
     
     filterPath = path
     filter = open( filterPath )
@@ -232,9 +231,8 @@ def loadFilter( path ):
     myFilter = numpy.zeros((yDim, xDim))
 
     for j in range(len(filterContents) - 2):
-        myFilter[j] = [int(s) for s in filterContents[j + 2].split(' ') if (filterIntCheck(s))]
+        myFilter[j] = [scaleFactor*int(s) for s in filterContents[j + 2].split(' ') if (filterIntCheck(s))]
     print('Loaded: ' + path)
-    print(scaleFactor)
     print(myFilter)
 
 def filterIntCheck(inputString):
@@ -281,7 +279,7 @@ def buildCurrentImageWithFilter():
                     pixelXIndex = m + (j - xFilterCenter)
                     if(pixelXIndex >= 0 and pixelXIndex < width and pixelYIndex >= 0 and pixelYIndex < height):
                         y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
-                        result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
+                        result += y_new*myFilter[yFilterIndex, xFilterIndex]
 
             dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
@@ -333,7 +331,7 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
                             pixelXIndex = m + (j - xFilterCenter)
                             if(pixelXIndex >= 0 and pixelXIndex < width and pixelYIndex >= 0 and pixelYIndex < height):
                                 y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
-                                result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
+                                result += y_new*myFilter[yFilterIndex, xFilterIndex]
 
                     dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
