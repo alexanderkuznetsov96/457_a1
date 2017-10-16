@@ -229,15 +229,27 @@ def loadFilter( path ):
     
     filterPath = path
     filter = open( filterPath )
+    filterContents = filter.read().splitlines()
+    xDim, yDim = [int(s) for s in filterContents[0].split(' ') if s.isdigit()]
+    scaleFactor = float(filterContents[1])
+
     ##dimensions = filter.readline()
-    xDim, yDim = [int(s) for s in filter.readline() if s.isdigit()]
-    scaleFactor = float(filter.readline())
+    #xDim, yDim = [int(s) for s in filter.splitlines().split(' ') if s.isdigit()]
+    #scaleFactor = float(filter.readline())
     myFilter = numpy.zeros((yDim, xDim))
-    for i in range(yDim):
-         myFilter[i] = [int(s) for s in filter.readline() if s.isdigit()]
+
+    for j in range(len(filterContents) - 2):
+        myFilter[j] = [int(s) for s in filterContents[j + 2].split(' ') if (filterIntCheck(s))]
     print('Loaded: ' + path)
     print(scaleFactor)
     print(myFilter)
+
+def filterIntCheck(inputString):
+    try:
+        int(inputString)
+    except ValueError:
+        return False
+    return True
 
 def buildCurrentImageWithFilter():
     global temporaryImage
