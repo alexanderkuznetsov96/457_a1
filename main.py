@@ -52,6 +52,8 @@ temporaryImage = Image.open(imgPath)
 
 filterRadius = 0
 
+buildTemporaryImageFlag = False
+
 # File dialog
 
 import Tkinter, tkFileDialog
@@ -59,77 +61,111 @@ import Tkinter, tkFileDialog
 root = Tkinter.Tk()
 root.withdraw()
 
-# Copy output image to current image
+# Build appropriate (temporary or current) image.
 
-def copyOutputImageToCurrentImage():
+def buildImage():
 
-    global currentImage
+  # Read image and convert to YCbCr
 
-    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
-        print 'Image dimensions to do not match!'
-        return
-
-    width  = currentImage.size[0]
-    height = currentImage.size[1]
-    tmpPixels = temporaryImage.load()
-    crtPixels = currentImage.load()
-
-    for i in range(width):
-        for j in range(height):
-
-            # read pixel in temporary image
-
-            r,g,b = tmpPixels[i,j]
-
-            # write to current image
-
-            crtPixels[i,height-j-1] = (r,g,b)
-
-            # Done
-
-# Build output from current image
-
-def buildOutputImageFromCurrent():
-
-    # Read image and convert to YCbCr
-
-    print imgPath
-    global temporaryImage
-
-    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
-        print 'Image dimensions to do not match!'
-        return
-
+  print imgPath
+  if (buildTemporaryImageFlag) :
+    src = temporaryImage.convert( 'YCbCr' )
+  else :
     src = currentImage.convert( 'YCbCr' )
-    srcPixels = src.load()
-    temporaryImage = temporaryImage.convert( 'YCbCr' )
-    dstPixels = temporaryImage.load()
+    
+  srcPixels = src.load()
 
-    width  = src.size[0]
-    height = src.size[1]
+  width  = src.size[0]
+  height = src.size[1]
 
-    # Build destination image from source image
+  # Set up a new, blank image of the same size
 
-    for i in range(width):
-        for j in range(height):
+  dst = Image.new( 'YCbCr', (width,height) )
+  dstPixels = dst.load()
 
-            # read source pixel
+  # Build destination image from source image
 
-            y,cb,cr = srcPixels[i,j]
+  for i in range(width):
+    for j in range(height):
+      
+      dstPixels[i,height-j-1] = srcPixels[i,j];
 
-            # ---- MODIFY PIXEL ----
+  # Done
 
-            #y = int(factor * y + term)
+  return dst.convert( 'RGB' )
 
-            # write destination pixel
+# Copy temporary image to current image
 
-            dstPixels[i,height-j-1] = (y,cb,cr)
+def copyTemporaryImageToCurrentImage():
 
-    # Done
+  global currentImage
+  
+  if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
+    print 'Image dimensions to do not match!'
+    return
+    
+  width  = currentImage.size[0]
+  height = currentImage.size[1]  
+  tmpPixels = temporaryImage.load()
+  crtPixels = currentImage.load()
+  
+  for i in range(width):
+    for j in range(height):
 
-    temporaryImage = temporaryImage.convert( 'RGB' )
+      # read pixel in temporary image
+  
+      r,g,b = tmpPixels[i,j]
+  
+      # write to current image
+  
+      crtPixels[i,j] = (r,g,b)
 
-def buildOutputImageWithHistogramEqualization():
+  # Done
+
+# Modify the current image and write to temporary image
+
+def modifyBrightnessAndContrastOfTemporaryImage():
+
+  print imgPath
+  global temporaryImage
+  
+  if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
+    print 'Image dimensions to do not match!'
+    return
+    
+  # Read image and convert to YCbCr
+    
+  src = currentImage.convert( 'YCbCr' )
+  srcPixels = src.load()
+  temporaryImage = temporaryImage.convert( 'YCbCr' )
+  dstPixels = temporaryImage.load()
+
+  width  = src.size[0]
+  height = src.size[1]
+
+  # Build destination image from source image
+
+  for i in range(width):
+    for j in range(height):
+
+      # read source pixel
+      
+      y,cb,cr = srcPixels[i,j]
+
+      # ---- MODIFY PIXEL ----
+
+      y = int(factor * y + term)
+      
+      # write destination pixel
+      
+      dstPixels[i,j] = (y,cb,cr)
+
+  # Done
+
+  print 'modifying temporary image'
+  temporaryImage = temporaryImage.convert( 'RGB' )
+
+def buildCurrentImageWithHistogramEqualization():
     #Read image and convert to YCbCr
     print imgPath
     global temporaryImage
@@ -176,7 +212,7 @@ def buildOutputImageWithHistogramEqualization():
             #add to new histogram array
             newHistArray[y] += 1
             #add to destination pixels
-            dstImgPixels[i, height - j - 1] = (y, cb, cr)
+            dstImgPixels[i,j] = (y, cb, cr)
 
     # normalize the histogram array
     normNewHistArray = newHistArray / (width * height)
@@ -184,7 +220,7 @@ def buildOutputImageWithHistogramEqualization():
     #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
     #plt.show()
     temporaryImage = temporaryImage.convert('RGB')
-    copyOutputImageToCurrentImage()
+    copyTemporaryImageToCurrentImage()
 
 def cumSum(array):
     # finds cumulative sum of a numpy array, list
@@ -204,7 +240,7 @@ def loadFilter( path ):
     print(scaleFactor)
     print(myFilter)
 
-def buildOutputImageWithFilter():
+def buildCurrentImageWithFilter():
     global myFilter, scaleFactor, temporaryImage
 
     if (currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
@@ -241,53 +277,17 @@ def buildOutputImageWithFilter():
                         y_new, cb, cr = srcImgPixels[pixelXIndex, pixelYIndex]
                         result += y_new*myFilter[yFilterIndex, xFilterIndex]*scaleFactor
 
-            dstImgPixels[m, height - n - 1] = (result, cb_pixel, cr_pixel)
+            dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
     temporaryImage = temporaryImage.convert('RGB')
-    copyOutputImageToCurrentImage()
+    copyTemporaryImageToCurrentImage()
+    
+    
 
-def buildOutputImageWithFilterRadiusR():
+def buildCurrentImageWithFilterRadiusR():
     return
 
-def buildOutputImageTransformingBrightnessAndContrast():
-
-    # Read image and convert to YCbCr
-
-    print imgPath
-    global temporaryImage
-
-    if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
-        print 'Image dimensions to do not match!'
-        return
-
-    src = currentImage.convert( 'YCbCr' )
-    srcPixels = src.load()
-    temporaryImage = temporaryImage.convert( 'YCbCr' )
-    dstPixels = temporaryImage.load()
-
-    width  = src.size[0]
-    height = src.size[1]
-
-    # Build destination image from source image
-
-    for i in range(width):
-        for j in range(height):
-
-            # read source pixel
-
-            y,cb,cr = srcPixels[i,j]
-
-            # ---- MODIFY PIXEL ----
-
-            y = int(factor * y + term)
-
-            # write destination pixel
-
-            dstPixels[i,height-j-1] = (y,cb,cr)
-
-    # Done
-
-    temporaryImage = temporaryImage.convert( 'RGB' )
+    
 
 # Set up the display and draw the current image
 
@@ -300,7 +300,7 @@ def display():
 
     # get the output image
 
-    img = temporaryImage
+    img = buildImage()
 
     width  = img.size[0]
     height = img.size[1]
@@ -340,7 +340,7 @@ def keyboard( key, x, y ):
             saveImage( outputPath )
 
     elif key == 'h':
-        buildOutputImageWithHistogramEqualization()
+        buildCurrentImageWithHistogramEqualization()
 
     elif key == 'f':
         path = tkFileDialog.askopenfilename( initialdir = filterDir )
@@ -348,10 +348,10 @@ def keyboard( key, x, y ):
           loadFilter( path )
 
     elif key == 'a':
-        buildOutputImageWithFilter()
+        buildCurrentImageWithFilter()
         
     elif key == 'r':
-        buildOutputImageWithFilterRadiusR()
+        buildCurrentImageWithFilterRadiusR()
         
     else:
         print 'key =', key    # DO NOT REMOVE THIS LINE.  It will be used during automated marking.
@@ -385,8 +385,6 @@ def loadImage( path ):
     width = currentImage.size[0]
     height = currentImage.size[1]
     temporaryImage = Image.new( 'YCbCr', (width,height) )
-    resetTermAndFactor()
-    buildOutputImageFromCurrent()
     print imgPath
 
 def saveImage( path ):
@@ -422,17 +420,20 @@ initTerm = 0
 
 def mouse( btn, state, x, y ):
 
-    global button, initX, initY, initFactor, useTempImageFlag
+    global button, initX, initY, initFactor, buildTemporaryImageFlag
 
     if state == GLUT_DOWN:
         button = btn
         initX = x
         initY = y
+        if(button == GLUT_LEFT_BUTTON):
+          buildTemporaryImageFlag = True
 
     elif state == GLUT_UP:
 
         if(button == GLUT_LEFT_BUTTON):
-          copyOutputImageToCurrentImage()
+          copyTemporaryImageToCurrentImage()
+          buildTemporaryImageFlag = False
         button = None
         
 
@@ -455,7 +456,7 @@ def motion( x, y ):
       if factor < 0:
         factor = 0
 
-      buildOutputImageTransformingBrightnessAndContrast()
+      modifyBrightnessAndContrastOfTemporaryImage()
       
     elif (button == GLUT_RIGHT_BUTTON) :
         print 'apply radius filter'
