@@ -6,7 +6,7 @@
 
 import sys, os, numpy
 import math
-#import matplotlib.pyplot as plt
+
 
 try: # Pillow
     from PIL import Image
@@ -150,8 +150,6 @@ def modifyBrightnessAndContrastOfTemporaryImage():
       
       y,cb,cr = srcPixels[i,j]
 
-      # ---- MODIFY PIXEL ----
-
       y = int(factor * y + term)
       
       # write destination pixel
@@ -161,7 +159,7 @@ def modifyBrightnessAndContrastOfTemporaryImage():
   # Done
 
   print 'modifying temporary image'
-  #temporaryImage = temporaryImage.convert( 'RGB' )
+
 
 def buildCurrentImageWithHistogramEqualization():
     #Read image and convert to YCbCr
@@ -194,9 +192,6 @@ def buildCurrentImageWithHistogramEqualization():
     cumSumArr = numpy.array(cumSum(normHistArray))
     #create the look up table by multiplying by (256-1)
     lookUpTable = numpy.round(cumSumArr*(intensities - 1))
-    #plt.figure(1)
-    #plt.bar(numpy.arange(len(normHistArray)), normHistArray)
-    #print len(lookUpTable)
 
     # create new histogram array for visualization
     newHistArray = numpy.zeros(intensities)
@@ -214,10 +209,6 @@ def buildCurrentImageWithHistogramEqualization():
 
     # normalize the histogram array
     normNewHistArray = newHistArray / (width * height)
-    #plt.figure(2)
-    #plt.bar(numpy.arange(len(normNewHistArray)), normNewHistArray)
-    #plt.show()
-    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()
 
 def cumSum(array):
@@ -232,10 +223,6 @@ def loadFilter( path ):
     filterContents = filter.read().splitlines()
     xDim, yDim = [int(s) for s in filterContents[0].split(' ') if s.isdigit()]
     scaleFactor = float(filterContents[1])
-
-    ##dimensions = filter.readline()
-    #xDim, yDim = [int(s) for s in filter.splitlines().split(' ') if s.isdigit()]
-    #scaleFactor = float(filter.readline())
     myFilter = numpy.zeros((yDim, xDim))
 
     for j in range(len(filterContents) - 2):
@@ -266,7 +253,6 @@ def buildCurrentImageWithFilter():
     width = srcImg.size[0]
     height = srcImg.size[1]
 
-    #tempFilter = numpy.flip(myFilter, 2)
     #apply convolution for all image
     xFilterDim = len(myFilter[0])
     yFilterDim = len(myFilter)
@@ -290,7 +276,6 @@ def buildCurrentImageWithFilter():
 
             dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
-    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()
     
     
@@ -312,7 +297,6 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
     width = srcImg.size[0]
     height = srcImg.size[1]   
 
-    #tempFilter = numpy.flip(myFilter, 2)
     #apply convolution for all image
     xFilterDim = len(myFilter[0])
     yFilterDim = len(myFilter)
@@ -321,12 +305,10 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
     
     imgX = x - (windowWidth - width)/2
     imgY = y - (windowHeight - height)/2
-    
-    #print 'y dim %d, x dim %d' %(yFilterDim, xFilterDim)
+
 
     for m in range(imgX - filterRadius, imgX + filterRadius):
         for n in range(imgY - filterRadius, imgY + filterRadius):
-            #print ('%d %d' %(m,n))
             if( (m - imgX)**2 + (n - imgY)**2 <= filterRadius**2):
                 result = 0
                 if(m >= 0 and m < width and n >= 0 and n < height):
@@ -344,7 +326,6 @@ def buildCurrentImageWithFilterRadiusR( x, y ):
 
                     dstImgPixels[m, n] = (result, cb_pixel, cr_pixel)
 
-    #temporaryImage = temporaryImage.convert('RGB')
     copyTemporaryImageToCurrentImage()    
 
     
@@ -511,7 +492,6 @@ def motion( x, y ):
     if (button == GLUT_LEFT_BUTTON) :
       factor = initFactor - diffY / float(windowHeight)
       term = initTerm + diffX / float(windowWidth) *  maxIntensity
-      #print "initFactor => %f  diffY => %f  height => %f  factor => %f  term => %f" %(initFactor, diffY, windowHeight, factor, term)
 
       if factor < 0:
         factor = 0
@@ -519,7 +499,6 @@ def motion( x, y ):
       modifyBrightnessAndContrastOfTemporaryImage()
       
     elif (button == GLUT_RIGHT_BUTTON) :
-        #print 'apply radius filter R = %d x,y = %d,%d' %(filterRadius, x,y)
         buildCurrentImageWithFilterRadiusR(x,y)
         
     glutPostRedisplay()
