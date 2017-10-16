@@ -1,12 +1,17 @@
 # Image manipulation
 #
+# Assignment #1
+#
+# Authors: 
+# Alexander "Sasha" Kuznetsov | 10138830 | sasha.kuznetsov@queensu.ca (13ak134)
+# Paul Briggs | 10137427 | 13pab10@queensu.ca
+#
 # You'll need Python 2.7 and must install these packages:
 #
 #   numpy, PyOpenGL, Pillow
 
 import sys, os, numpy
 import math
-
 
 try: # Pillow
     from PIL import Image
@@ -23,8 +28,10 @@ except:
     sys.exit(0)
 
 # Constants
+
 maxIntensity = 235
 intensities = 256
+
 # Globals
 
 windowWidth  = 600 # window dimensions
@@ -33,28 +40,27 @@ windowHeight =  600
 factor = 1 # factor by which luminance is scaled
 term = 0 # term by which luminance is transformed
 
-#filter variables
+# Filter Variables
+
 scaleFactor = 0
 myFilter = []
+filterRadius = 15
 
-# Image directory and path to image file
+# Image and filter paths
 
 imgDir = 'images'
 imgFilename = 'mandrill.png'
-
 imgPath = os.path.join(imgDir, imgFilename)
 
 filterDir = 'filters'
 filterFilename = 'gaussian7x'
-
 filterPath = os.path.join(filterDir, filterFilename)
+
+# Current and temporary images
 
 currentImage = Image.open(imgPath).convert( 'YCbCr' )
 temporaryImage = Image.open(imgPath).convert( 'YCbCr' )
-
-filterRadius = 15
-
-buildTemporaryImageFlag = False
+buildTemporaryImageFlag = False # this flag indicates whether to render the current or temporary image
 
 # File dialog
 
@@ -68,8 +74,7 @@ root.withdraw()
 def buildImage():
 
   # Read image
-
-  print imgPath
+  
   if (buildTemporaryImageFlag) :
     src = temporaryImage
   else :
@@ -81,7 +86,7 @@ def buildImage():
   height = src.size[1]
 
   # Set up a new, blank image of the same size
-
+  
   dst = Image.new( 'YCbCr', (width,height) )
   dstPixels = dst.load()
 
@@ -92,7 +97,7 @@ def buildImage():
       
       dstPixels[i,height-j-1] = srcPixels[i,j];
 
-  # Done
+  # Done, return image as RGB for glut to render
 
   return dst.convert( 'RGB' )
 
@@ -120,11 +125,10 @@ def copyTemporaryImageToCurrentImage():
 
   # Done
 
-# Modify the current image and write to temporary image
+# Modify brightness and contrast in current image and write to temporary image
 
 def modifyBrightnessAndContrastOfTemporaryImage():
 
-  print imgPath
   global temporaryImage
   
   if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
@@ -158,61 +162,63 @@ def modifyBrightnessAndContrastOfTemporaryImage():
 
   # Done
 
-  print 'modifying temporary image'
-
 
 def buildCurrentImageWithHistogramEqualization():
-    #Read image and convert to YCbCr
+
     print imgPath
     global temporaryImage
     if(currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
         return
+    
+    #Read image
     srcImg = currentImage
     srcImgPixels = srcImg.load()
+    
+    # Reuse temporary image as destination canvas
     temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
 
-    #create the histogram array
+    # Create the histogram array
     histArray = numpy.zeros(intensities)
 
     for i in range(width):
         for j in range(height):
-            #get source pixel
+            # Get source pixel
             y, cb, cr = srcImgPixels[i,j]
-            #add 1 to its intensity bin
+            # Add 1 to its intensity bin
             histArray[y] += 1
 
-    #normalize the histogram array
+    # Normalize the histogram array
     normHistArray = histArray/(width*height)
-    #get our cumulative sum density function
+    # Get our cumulative sum density function
     cumSumArr = numpy.array(cumSum(normHistArray))
-    #create the look up table by multiplying by (256-1)
+    # Create the look up table by multiplying by (256-1)
     lookUpTable = numpy.round(cumSumArr*(intensities - 1))
 
-    # create new histogram array for visualization
+    # Create new histogram array for visualization
     newHistArray = numpy.zeros(intensities)
-    #create new picture
+    # Create new picture
     for i in range(width):
         for j in range(height):
-            #get source pixel
+            # Get source pixel
             y, cb, cr = srcImgPixels[i,j]
-            #change using look up table
+            # Change using look up table
             y = int(lookUpTable[y])
-            #add to new histogram array
+            # Add to new histogram array
             newHistArray[y] += 1
-            #add to destination pixels
+            # Add to destination pixels
             dstImgPixels[i,j] = (y, cb, cr)
 
-    # normalize the histogram array
+    # Normalize the histogram array
     normNewHistArray = newHistArray / (width * height)
     copyTemporaryImageToCurrentImage()
 
 def cumSum(array):
-    # finds cumulative sum of a numpy array, list
+    # Finds cumulative sum of a numpy array, list
     return [sum(array[:i+1]) for i in range(len(array))]
 
 def loadFilter( path ):
@@ -245,20 +251,23 @@ def buildCurrentImageWithFilter():
         print 'Image dimensions do not match..'
         return
 
+    #Read image
     srcImg = currentImage
     srcImgPixels = srcImg.load()
+    
+    # Reuse temporary image as destination canvas
     temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]
 
-    #apply convolution for all image
     xFilterDim = len(myFilter[0])
     yFilterDim = len(myFilter)
     xFilterCenter = int(math.floor(xFilterDim/2))
     yFilterCenter = int(math.floor(yFilterDim/2))
 
+    # Apply convolution for all image
     for m in range(width):
         for n in range(height):
             result = 0
@@ -278,37 +287,39 @@ def buildCurrentImageWithFilter():
 
     copyTemporaryImageToCurrentImage()
     
-    
 
 def buildCurrentImageWithFilterRadiusR( x, y ):
 
     global temporaryImage, currentImage
     
-
     if (currentImage.size[0] != temporaryImage.size[0] or currentImage.size[1] != temporaryImage.size[1]):
         print 'Image dimensions do not match..'
         return
 
+    #Read image
     srcImg = currentImage
     srcImgPixels = srcImg.load()
+    
+    # Reuse temporary image as destination canvas
     temporaryImage = temporaryImage
     dstImgPixels = temporaryImage.load()
 
     width = srcImg.size[0]
     height = srcImg.size[1]   
 
-    #apply convolution for all image
     xFilterDim = len(myFilter[0])
     yFilterDim = len(myFilter)
     xFilterCenter = int(math.floor(xFilterDim/2))
     yFilterCenter = int(math.floor(yFilterDim/2))
     
+    # Find pixel location corresponding to cursor location
     imgX = x - (windowWidth - width)/2
     imgY = y - (windowHeight - height)/2
 
-
+    # Loop for pixels within checkboard distance R of cursor
     for m in range(imgX - filterRadius, imgX + filterRadius):
         for n in range(imgY - filterRadius, imgY + filterRadius):
+            # If the pixels is within the euclidian distance R of cursor, apply the filter
             if( (m - imgX)**2 + (n - imgY)**2 <= filterRadius**2):
                 result = 0
                 if(m >= 0 and m < width and n >= 0 and n < height):
@@ -378,8 +389,7 @@ def keyboard( key, x, y ):
             loadImage( path )
 
     elif key == 's':
-        outputPath = tkFileDialog.asksaveasfilename( initialdir = '.' )
-        print outputPath 
+        outputPath = tkFileDialog.asksaveasfilename( initialdir = '.' ) 
         if outputPath:
             saveImage( outputPath )
 
@@ -425,14 +435,12 @@ def loadImage( path ):
     width = currentImage.size[0]
     height = currentImage.size[1]
     temporaryImage = Image.open(imgPath).convert( 'YCbCr' )
-    
-    #print imgPath
 
 def saveImage( path ):
 
     print path
+    
     currentImage.save( path )
-    return
 
 
 
@@ -470,12 +478,15 @@ def mouse( btn, state, x, y ):
         initX = x
         initY = y
         if(button == GLUT_LEFT_BUTTON):
+          # During brightness and contrast modifications, render temporary image
           buildTemporaryImageFlag = True
 
     elif state == GLUT_UP:
 
         if(button == GLUT_LEFT_BUTTON):
+          # When brightness and contrast operations are complete, copy temporary image to current image
           copyTemporaryImageToCurrentImage()
+          # Render the current image
           buildTemporaryImageFlag = False
         button = None     
 
@@ -496,9 +507,11 @@ def motion( x, y ):
       if factor < 0:
         factor = 0
 
+      # Modify brightness and contrast when left mouse button is held down
       modifyBrightnessAndContrastOfTemporaryImage()
       
-    elif (button == GLUT_RIGHT_BUTTON) :
+    elif (button == GLUT_RIGHT_BUTTON):
+        # Apply filter within radius r when right mouse button is held down
         buildCurrentImageWithFilterRadiusR(x,y)
         
     glutPostRedisplay()
