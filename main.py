@@ -386,6 +386,7 @@ def keyboard( key, x, y ):
 
     elif key == 's':
         outputPath = tkFileDialog.asksaveasfilename( initialdir = '.' )
+        print outputPath 
         if outputPath:
             saveImage( outputPath )
 
@@ -436,7 +437,9 @@ def loadImage( path ):
 
 def saveImage( path ):
 
+    print path
     currentImage.save( path )
+    return
 
 
 
